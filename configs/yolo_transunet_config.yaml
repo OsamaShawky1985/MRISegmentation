@@ -1,0 +1,79 @@
+data:
+  # Data paths
+  input_images_path: "data/raw_images"
+  output_path: "data/results"
+  train_path: "data/train"
+  test_path: "data/test"
+  val_split: 0.2
+  input_size: [640, 640]  # YOLO input size
+  segmentation_size: [224, 224]  # TransUNet input size
+
+# YOLOv10 Configuration
+yolo:
+  model_size: "yolov10n"  # Options: yolov10n, yolov10s, yolov10m, yolov10l, yolov10x
+  # NOTE: All models use COCO dataset pretrained weights by default
+  # COCO contains 80 object classes, our pipeline adapts to 1 class (brain tumor)
+  # Pretrained weights are automatically downloaded from Ultralytics
+  confidence_threshold: 0.25
+  iou_threshold: 0.45
+  max_detections: 100
+  pretrained: true  # Uses COCO pretrained weights (recommended)
+  num_classes: 1  # Brain tumor class (adapted from 80 COCO classes)
+  epochs: 100
+  batch_size: 16
+  learning_rate: 0.001
+  weight_decay: 0.0005
+
+# TransUNet Configuration
+transunet:
+  img_size: 224
+  patch_size: 16
+  num_classes: 2  # Background and tumor
+  embed_dim: 768
+  depth: 12
+  num_heads: 12
+  mlp_ratio: 4
+  qkv_bias: true
+  drop_rate: 0.1
+  attn_drop_rate: 0.0
+  drop_path_rate: 0.1
+  epochs: 200
+  batch_size: 8
+  learning_rate: 0.0001
+  weight_decay: 0.01
+
+# Preprocessing
+preprocessing:
+  clahe_clip_limit: 2.0
+  clahe_grid_size: [8, 8]
+  denoise_h: 10
+  edge_sigma: 2.0
+  normalize: true
+  resize_method: "bilinear"
+
+# Augmentation
+augmentation:
+  rotation_range: 15
+  shift_range: 0.1
+  zoom_range: 0.1
+  horizontal_flip: true
+  vertical_flip: false
+  brightness_range: [0.8, 1.2]
+  contrast_range: [0.8, 1.2]
+  noise_sigma: 0.02
+
+# Training
+training:
+  device: "cuda"
+  num_workers: 4
+  pin_memory: true
+  mixed_precision: true
+  gradient_clipping: 1.0
+  early_stopping_patience: 20
+  save_best_only: true
+  
+# Evaluation
+evaluation:
+  metrics: ["precision", "recall", "f1", "iou", "dice"]
+  save_predictions: true
+  visualize_results: true
