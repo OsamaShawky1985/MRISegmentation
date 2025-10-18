@@ -102,13 +102,20 @@ def train_pipeline(config_path: str, data_dir: str, output_dir: str):
     logger.info(f"Data splits: Train={len(data_splits['train'])}, "
                 f"Val={len(data_splits['val'])}, Test={len(data_splits['test'])}")
     
+    # Get mask paths from the configuration
+    mask_dir = config['data'].get('train_masks', None)
+    if not mask_dir:
+        raise ValueError("Mask directory not specified in the configuration file.")
+    
+    mask_paths = get_image_paths(mask_dir, extensions=['.png', '.jpg', '.jpeg'])
+    mask_paths_train = [p for p in mask_paths if Path(p).stem in [Path(img).stem for img in data_splits['train']]]
+    mask_paths_val = [p for p in mask_paths if Path(p).stem in [Path(img).stem for img in data_splits['val']]]
+    
     # Train YOLO (if you have detection annotations)
     # Note: You'll need to prepare YOLO format annotations
     pipeline.train_yolo(data_dir)
     
     # Train TransUNet (if you have segmentation masks)
-    # Note: You'll need corresponding mask files
-    mask_paths = [p.replace('images', 'masks').replace('.jpg', '.png') for p in image_paths]
     pipeline.train_transunet(data_splits['train'], mask_paths_train, 
                              data_splits['val'], mask_paths_val)
     
