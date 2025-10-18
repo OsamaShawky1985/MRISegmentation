@@ -1,0 +1,6 @@
+names:
+- brain_tumor
+nc: 1
+path: C:\PHD\MRISegmentation\MRISegmentation\data\results\yolo_data
+train: images/train
+val: images/val

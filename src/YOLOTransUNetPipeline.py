@@ -74,9 +74,12 @@ class YOLOTransUNetPipeline:
     def __init__(self, config: Dict):
         self.config = config
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+        # Setup logging
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
         # Initialize models
         self.yolo_detector = YOLOv10Detector(config)
+        self.logger.info("End Yolo10 config...")
         self.transunet = TransUNet(
             img_size=config['transunet']['img_size'],
             patch_size=config['transunet']['patch_size'],
@@ -92,9 +95,7 @@ class YOLOTransUNetPipeline:
             drop_path_rate=config['transunet']['drop_path_rate']
         ).to(self.device)
         
-        # Setup logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
+
         
         # Create output directories
         self.output_dir = Path(config['data']['output_path'])
@@ -135,10 +136,10 @@ class YOLOTransUNetPipeline:
             train_data_path, 
             str(self.output_dir / 'yolo_data')
         )
-        
+        logging.info(f"YOLO data prepared at {yolo_data_config}")
         # Train the model
         results = self.yolo_detector.train(yolo_data_config)
-        
+        logging.info("YOLOv10 training completed.")
         # Save model
         model_save_path = self.output_dir / 'yolo_best.pt'
         self.yolo_detector.model.save(str(model_save_path))

@@ -104,13 +104,13 @@ def train_pipeline(config_path: str, data_dir: str, output_dir: str):
     
     # Train YOLO (if you have detection annotations)
     # Note: You'll need to prepare YOLO format annotations
-    # pipeline.train_yolo(data_dir)
+    pipeline.train_yolo(data_dir)
     
     # Train TransUNet (if you have segmentation masks)
     # Note: You'll need corresponding mask files
-    # mask_paths = [p.replace('images', 'masks').replace('.jpg', '.png') for p in image_paths]
-    # pipeline.train_transunet(data_splits['train'], mask_paths_train, 
-    #                         data_splits['val'], mask_paths_val)
+    mask_paths = [p.replace('images', 'masks').replace('.jpg', '.png') for p in image_paths]
+    pipeline.train_transunet(data_splits['train'], mask_paths_train, 
+                             data_splits['val'], mask_paths_val)
     
     logger.info("Pipeline training completed!")
 

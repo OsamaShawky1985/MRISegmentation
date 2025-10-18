@@ -1,68 +1,64 @@
 data:
-  # Data paths
-  input_images_path: "data/raw_images"
   output_path: "data/results"
-  train_path: "data/train"
-  test_path: "data/test"
-  val_split: 0.2
+  train_images: "data/sample_dataset"
+  train_masks: "data/processed_dataset/masks"
+  yolo_labels: "data/processed_dataset/yolo_labels"
+  val_split: 0.2  # Used for data splitting, not for YOLO training
   input_size: [640, 640]  # YOLO input size
   segmentation_size: [224, 224]  # TransUNet input size
+  batch_size: 16  
 
-# YOLOv10 Configuration
 yolo:
-  model_size: "yolov10n"  # Options: yolov10n, yolov10s, yolov10m, yolov10l, yolov10x
-  # NOTE: All models use COCO dataset pretrained weights by default
-  # COCO contains 80 object classes, our pipeline adapts to 1 class (brain tumor)
-  # Pretrained weights are automatically downloaded from Ultralytics
-  confidence_threshold: 0.25
-  iou_threshold: 0.45
-  max_detections: 100
-  pretrained: true  # Uses COCO pretrained weights (recommended)
-  num_classes: 1  # Brain tumor class (adapted from 80 COCO classes)
-  epochs: 100
-  batch_size: 16
-  learning_rate: 0.001
-  weight_decay: 0.0005
+  model_path: "models/yolo_best.pt"
+  confidence_threshold: 0.5  # Minimum confidence for detections
+  iou_threshold: 0.45        # IoU threshold for non-max suppression (NMS)
+  model_size: "models/yolo_best"  # Path to the YOLO model file
+  max_detections: 100        # Maximum number of detections per image
+  img_size: 640              # Image size for YOLO (e.g., 640x640)
+  batch_size: 16             # Batch size for YOLO training
+  learning_rate: 0.001       # Learning rate for YOLO training
+  epochs: 50                 # Number of training epochs for YOLO
+  optimizer: "adam"          # Optimizer for YOLO (e.g., adam, sgd)
+  scheduler: "cosine"        # Learning rate scheduler (e.g., cosine, step)
+  weight_decay: 0.0005       # Weight decay for YOLO optimizer
+  num_classes: 1             # Number of classes (e.g., 1 for brain tumors)
+  input_size: [640, 640]  # YOLO input size
 
-# TransUNet Configuration
+unet:
+  model_path: "models/unet_best.pth"
+  input_channels: 3          # Number of input channels (e.g., RGB = 3)
+  output_channels: 1         # Number of output channels (e.g., binary mask = 1)
+  learning_rate: 0.001       # Learning rate for U-Net training
+  epochs: 10                 # Number of training epochs for U-Net
+  model_size: 224            # Input image size (e.g., 224x224)
+  input_size: 224            # Input size for U-Net (e.g., 224x224)
+  img_size: 224              # Image size for U-Net (e.g., 224x224)
+  batch_size: 8              # Batch size for U-Net training
+  optimizer: "adam"          # Optimizer for U-Net (e.g., adam, sgd)
+  scheduler: "step"          # Learning rate scheduler (e.g., step, cosine)
+  weight_decay: 0.0001       # Weight decay for U-Net optimizer
+  dropout_rate: 0.1          # Dropout rate for U-Net layers
+  augmentation: True         # Whether to apply data augmentation during training
+  num_classes: 1             # Number of classes (e.g., 1 for brain tumors)
+
 transunet:
-  img_size: 224
-  patch_size: 16
-  num_classes: 2  # Background and tumor
-  embed_dim: 768
-  depth: 12
-  num_heads: 12
-  mlp_ratio: 4
-  qkv_bias: true
-  drop_rate: 0.1
-  attn_drop_rate: 0.0
-  drop_path_rate: 0.1
-  epochs: 200
-  batch_size: 8
-  learning_rate: 0.0001
-  weight_decay: 0.01
-
-# Preprocessing
-preprocessing:
-  clahe_clip_limit: 2.0
-  clahe_grid_size: [8, 8]
-  denoise_h: 10
-  edge_sigma: 2.0
-  normalize: true
-  resize_method: "bilinear"
-
-# Augmentation
-augmentation:
-  rotation_range: 15
-  shift_range: 0.1
-  zoom_range: 0.1
-  horizontal_flip: true
-  vertical_flip: false
-  brightness_range: [0.8, 1.2]
-  contrast_range: [0.8, 1.2]
-  noise_sigma: 0.02
-
-# Training
+  model_path: "models/transunet_best.pth"
+  img_size: 224              # Image size for TransUNet (e.g., 224x224)
+  patch_size: 16             # Patch size for TransUNet
+  num_classes: 2             # Background and tumor
+  embed_dim: 768             # Embedding dimension for the transformer
+  depth: 12                  # Number of transformer layers
+  num_heads: 12              # Number of attention heads in the transformer
+  mlp_ratio: 4               # MLP ratio in the transformer
+  qkv_bias: true             # Whether to include bias in query, key, and value projections
+  drop_rate: 0.1             # Dropout rate for TransUNet layers
+  attn_drop_rate: 0.0        # Dropout rate for attention mechanism
+  drop_path_rate: 0.1        # Stochastic depth rate for transformer layers
+  epochs: 200                # Number of training epochs for TransUNet
+  batch_size: 8              # Batch size for TransUNet training
+  learning_rate: 0.0001      # Learning rate for TransUNet training
+  weight_decay: 0.01         # Weight decay for TransUNet optimizer
+  # Training
 training:
   device: "cuda"
   num_workers: 4
@@ -77,3 +73,15 @@ evaluation:
   metrics: ["precision", "recall", "f1", "iou", "dice"]
   save_predictions: true
   visualize_results: true
+
+# Augmentation
+augmentation:
+  rotation_range: 15
+  shift_range: 0.1
+  zoom_range: 0.1
+  horizontal_flip: true
+  vertical_flip: false
+  brightness_range: [0.8, 1.2]
+  contrast_range: [0.8, 1.2]
+  noise_sigma: 0.02
+

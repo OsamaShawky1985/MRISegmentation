@@ -15,14 +15,15 @@ class YOLOv10Detector:
     """
     
     def __init__(self, config: Dict):
+       
         self.config = config
         self.model_size = config['yolo']['model_size']
         self.confidence_threshold = config['yolo']['confidence_threshold']
         self.iou_threshold = config['yolo']['iou_threshold']
         self.max_detections = config['yolo']['max_detections']
-        self.input_size = config['data']['input_size']
+        self.input_size = config['yolo']['input_size']
         self.num_classes = config['yolo']['num_classes']
-        
+        print('num classes')
         self.model = None
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
@@ -48,23 +49,50 @@ class YOLOv10Detector:
             
         self.model.to(self.device)
         
-    def prepare_training_data(self, data_dir: str, output_dir: str):
+    def prepare_training_data(self, data_dir: str, output_dir: str, val_split: float = 0.2):
         """
         Prepare data in YOLO format
         
         Args:
             data_dir: Directory containing images and annotations
             output_dir: Output directory for YOLO format data
+            val_split: Fraction of data to use for validation
         """
+        import shutil
+        from sklearn.model_selection import train_test_split
+        logging.basicConfig(level=logging.INFO)
+        logging.info(f"Preparing training data from {data_dir} to {output_dir}")
+        # Create output directory structure
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Create directory structure
         (output_path / 'images' / 'train').mkdir(parents=True, exist_ok=True)
         (output_path / 'images' / 'val').mkdir(parents=True, exist_ok=True)
         (output_path / 'labels' / 'train').mkdir(parents=True, exist_ok=True)
         (output_path / 'labels' / 'val').mkdir(parents=True, exist_ok=True)
-        
+
+        # Collect all image files and corresponding label files
+        image_dir = Path(data_dir) / 'images'
+        label_dir = Path(data_dir) / 'labels'
+        images = list(image_dir.glob('*.jpg')) + list(image_dir.glob('*.png'))
+        labels = [label_dir / (img.stem + '.txt') for img in images]
+
+        # Split data into training and validation sets
+        train_images, val_images, train_labels, val_labels = train_test_split(
+            images, labels, test_size=val_split, random_state=42
+        )
+
+        # Copy training data
+        for img, lbl in zip(train_images, train_labels):
+            shutil.copy(img, output_path / 'images' / 'train' / img.name)
+            if lbl.exists():
+                shutil.copy(lbl, output_path / 'labels' / 'train' / lbl.name)
+
+        # Copy validation data
+        for img, lbl in zip(val_images, val_labels):
+            shutil.copy(img, output_path / 'images' / 'val' / img.name)
+            if lbl.exists():
+                shutil.copy(lbl, output_path / 'labels' / 'val' / lbl.name)
+
         # Create YOLO data config file
         data_config = {
             'path': str(output_path.absolute()),
@@ -73,10 +101,10 @@ class YOLOv10Detector:
             'nc': self.num_classes,
             'names': ['brain_tumor']
         }
-        
+
         with open(output_path / 'data.yaml', 'w') as f:
             yaml.dump(data_config, f)
-            
+
         self.logger.info(f"YOLO data structure created at {output_path}")
         return str(output_path / 'data.yaml')
     
@@ -91,7 +119,7 @@ class YOLOv10Detector:
         """
         if self.model is None:
             self.load_model(pretrained=True)
-            
+        logging.info("Model loaded for training.")   
         epochs = epochs or self.config['yolo']['epochs']
         batch_size = batch_size or self.config['yolo']['batch_size']
         
@@ -121,7 +149,6 @@ class YOLOv10Detector:
             'overlap_mask': True,
             'mask_ratio': 4,
             'dropout': 0.0,
-            'val_fraction': 1.0,
             'verbose': True
         }
         
